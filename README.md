@@ -58,15 +58,6 @@ docker run --name nginx-php-fpm -p 80:80 \
 --link=mysql:mysql \
 -d nginx-php-fpm:latest
 ```
-## 服务重载
-```
-docker exec -it nginx-php-fpm nginx -t -c /etc/nginx/nginx.conf
-docker exec -it nginx-php-fpm nginx -s reload
-```
-## 安装PHP扩展
-```
-docker-php-ext-install sockets
-```
 ## 推荐的NGINX配置
 /root/docker/nginx/conf/nginx.conf
 ```
@@ -149,4 +140,14 @@ server {
         deny all; 
     }
 }
+```
+## 服务重载
+```
+docker cp /root/docker/nginx/conf/nginx.conf nginx-php-fpm://etc/nginx/nginx.conf
+docker exec -it nginx-php-fpm nginx -t -c /etc/nginx/nginx.conf
+docker exec -it nginx-php-fpm nginx -s reload
+```
+## 安装PHP扩展
+```
+docker-php-ext-install sockets
 ```
