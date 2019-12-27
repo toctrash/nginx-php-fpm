@@ -42,7 +42,10 @@ docker exec -it svn svn co svn://your-ip/test /www/test --username your-name --p
 # 拉取 MySQL 镜像
 ```
 docker pull mysql:5.6
-docker run -itd --name mysql -p 3306:3306 -v /root/docker/mysql:/etc/mysql/sqlinit -e MYSQL_ROOT_PASSWORD=your-password mysql:5.6
+docker run --name mysql -p 3306:3306 \
+-v /root/docker/mysql:/etc/mysql/sqlinit \
+-e MYSQL_ROOT_PASSWORD=your-password \
+-d mysql:5.6
 ```
 
 # 拉取 NGINX-PHP-FPM 仓库
@@ -65,3 +68,85 @@ docker exec -it nginx-php-fpm nginx -s reload
 docker-php-ext-install sockets
 ```
 ## 推荐的NGINX配置
+/root/docker/nginx/conf/nginx.conf
+```
+#user  nobody;
+worker_processes auto;
+
+#error_log  logs/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+
+#pid        run/nginx.pid;
+
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+    #                  '$status $body_bytes_sent "$http_referer" '
+    #                  '"$http_user_agent" "$http_x_forwarded_for"';
+
+    #access_log  logs/access.log  main;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    #keepalive_timeout  0;
+    keepalive_timeout 2;
+        client_max_body_size 100m;
+
+    server_tokens off;
+    #gzip  on;
+
+    include /etc/nginx/sites-enabled/*;
+    include /etc/nginx/conf.d/*.conf;
+}
+#daemon off;
+```
+/root/docker/nginx/conf/conf.d/test.conf
+```
+server {
+    listen      80;
+    server_name your-server-name;
+    root        /var/www/html/test/public;
+    index       index.php index.html index.htm index.phtml;
+    charset     utf-8;
+
+    location ~ \.php$ {
+        try_files $uri =404;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_pass unix:/var/run/php-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param SCRIPT_NAME $fastcgi_script_name;
+        fastcgi_index index.php;
+        include fastcgi_params;
+    }
+
+    location / {
+        if (!-e $request_filename) {
+        	rewrite ^/index.php(.*)$ /index.php?s=$1 last; 
+        	rewrite ^(.*)$ /index.php?s=$1 last; 
+        	break;
+        }
+    }
+
+    location ~* ^/(css|img|js|flv|swf|download)/(.+)$ {
+        root /var/www/html/test/public;
+    }
+    location ~* \.(eot|ttf|woff|svg|otf)$ {
+        add_header Access-Control-Allow-Origin *;
+        add_header Access-Control-Allow-Headers X-Requested-With;
+        add_header Access-Control-Allow-Methods GET,POST,OPTIONS;
+    }
+    location ~ /\.ht {
+        deny all; 
+    }
+}
+```
